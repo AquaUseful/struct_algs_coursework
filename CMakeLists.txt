@@ -10,3 +10,5 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 
 add_subdirectory(main)
+
+add_subdirectory(doctest)
