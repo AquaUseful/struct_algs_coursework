@@ -9,6 +9,8 @@
 
 namespace btree {
 template <std::totally_ordered ValT, std::size_t order> class BTreeNode final {
+  static_assert(order > 1, "Order must be more than 1");
+
 public:
   using value_t = ValT;
   using value_reference_t = value_t &;
@@ -80,12 +82,11 @@ private:
 
     right_sibling->m_parent = m_parent;
 
-    std::move(median() + 1, end(), right_sibling->begin());
-    right_sibling->m_value_count = std::distance(median() + 1, end());
+    right_sibling->move_values(median() + 1, end());
 
     if (!m_leaf) {
-      std::move(right_child(median()), right_child(end()) + 1,
-                right_sibling->left_child(right_sibling->begin()));
+      right_sibling->move_children(right_child(median()),
+                                   right_child(end()) + 1);
     }
 
     value_iterator_t ins_point = m_parent->unbalanced_insert(*median());
@@ -102,17 +103,12 @@ private:
     new_left->m_parent = this;
     new_right->m_parent = this;
 
-    std::move(begin(), median(), new_left->begin());
-    std::move(median() + 1, end(), new_right->begin());
-
-    new_left->m_value_count = std::distance(begin(), median());
-    new_right->m_value_count = std::distance(median() + 1, end());
+    new_right->move_values(begin(), median());
+    new_left->move_values(median() + 1, end());
 
     if (!m_leaf) {
-      std::move(left_child(begin()), right_child(median()),
-                new_left->left_child(new_left->begin()));
-      std::move(right_child(median()), right_child(end()) + 1,
-                new_right->left_child(new_right->begin()));
+      new_left->move_children(left_child(begin()), right_child(median()));
+      new_right->move_children(right_child(median()), right_child(end()) + 1);
       new_left->m_leaf = false;
       new_right->m_leaf = false;
     }
@@ -125,6 +121,15 @@ private:
     *right_child(begin()) = std::move(new_right);
   }
 
+  void move_values(value_iterator_t first, value_iterator_t last) {
+    std::move(first, last, m_values.begin());
+    m_value_count = std::distance(first, last);
+  }
+
+  void move_children(child_ptr_iterator_t first, child_ptr_iterator_t last) {
+    std::move(first, last, m_children.begin());
+  }
+
 private:
   value_array_t m_values;
   child_ptr_array_t m_children;
@@ -134,4 +139,4 @@ private:
 
   bool m_leaf;
 };
-} // namespace btree0
+} // namespace btree
