@@ -1,0 +1,7 @@
+set(TARGET_NAME btree)
+set(TARGET_SRC_FILES)
+set(TARGET_INCLUDE_DIRS include/)
+
+set(CMAKE_CXX_STANDARD 20)
+add_library(${TARGET_NAME} INTERFACE ${TARGET_SRC_FILES})
+target_include_directories(${TARGET_NAME} INTERFACE ${TARGET_INCLUDE_DIRS})
