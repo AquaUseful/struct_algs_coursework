@@ -43,6 +43,17 @@ public:
     }
   }
 
+  bool search(value_t val) {
+    auto candidate = std::lower_bound(begin(), end(), val);
+    if (*candidate != val) {
+      if (!m_leaf) {
+        return (*left_child(candidate))->search(val);
+      }
+      return false;
+    }
+    return true;
+  }
+
 private:
   value_iterator_t begin() { return m_values.begin(); }
   value_iterator_t end() { return begin() + m_value_count; }
@@ -103,8 +114,8 @@ private:
     new_left->m_parent = this;
     new_right->m_parent = this;
 
-    new_right->move_values(begin(), median());
-    new_left->move_values(median() + 1, end());
+    new_left->move_values(begin(), median());
+    new_right->move_values(median() + 1, end());
 
     if (!m_leaf) {
       new_left->move_children(left_child(begin()), right_child(median()));
