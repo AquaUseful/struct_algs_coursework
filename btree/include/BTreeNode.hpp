@@ -69,7 +69,7 @@ private:
 
   value_iterator_t unbalanced_insert(value_t val) {
     auto insert_pos = std::upper_bound(begin(), end(), val);
-    std::shift_right(insert_pos, end(), 1);
+    std::shift_right(insert_pos, end() + 1, 1);
     if (!m_leaf) {
       std::shift_right(right_child(insert_pos), right_child(end()) + 1, 1);
     }
