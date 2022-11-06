@@ -9,3 +9,14 @@ ui::MainForm::MainForm(QWidget *parent)
   ui->setupUi(this);
   ui->retranslateUi(this);
 }
+
+ui::MainForm::~MainForm() {
+  m_interactive_tree.quit();
+  m_interactive_tree.wait();
+}
+
+void ui::MainForm::configure_slots() {
+  connect(ui->addButton, SIGNAL(clicked()), this, SLOT(add_value()));
+}
+
+void ui::MainForm::add_value() {}

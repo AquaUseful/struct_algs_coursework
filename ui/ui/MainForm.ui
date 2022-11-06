@@ -11,14 +11,14 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>B - деревья</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_4">
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -40,10 +40,10 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_2">
              <item>
-              <widget class="QSpinBox" name="spinBox"/>
+              <widget class="QSpinBox" name="addVal"/>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton">
+              <widget class="QPushButton" name="addButton">
                <property name="text">
                 <string>Добавить</string>
                </property>
@@ -70,10 +70,10 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
-              <widget class="QSpinBox" name="spinBox_2"/>
+              <widget class="QSpinBox" name="delVal"/>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_2">
+              <widget class="QPushButton" name="delButton">
                <property name="text">
                 <string>Удалить</string>
                </property>
@@ -100,7 +100,7 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_4">
              <item>
-              <widget class="QSpinBox" name="spinBox_3"/>
+              <widget class="QSpinBox" name="replFromVal"/>
              </item>
              <item>
               <widget class="QLabel" name="label">
@@ -116,10 +116,10 @@
               </widget>
              </item>
              <item>
-              <widget class="QSpinBox" name="spinBox_4"/>
+              <widget class="QSpinBox" name="replToBtn"/>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_3">
+              <widget class="QPushButton" name="replaceButton">
                <property name="text">
                 <string>Заменить</string>
                </property>
@@ -146,10 +146,10 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="QSpinBox" name="spinBox_5"/>
+              <widget class="QSpinBox" name="findVal"/>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_4">
+              <widget class="QPushButton" name="searchButton">
                <property name="text">
                 <string>Найти значение</string>
                </property>
@@ -165,6 +165,11 @@
           <property name="title">
            <string>Визуализация</string>
           </property>
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <item>
+            <widget class="QGraphicsView" name="graphicsView_2"/>
+           </item>
+          </layout>
          </widget>
         </item>
        </layout>
