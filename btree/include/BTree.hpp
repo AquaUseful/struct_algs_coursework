@@ -43,18 +43,12 @@ public:
 
   void remove(value_t val) {}
 
-  void from_array_data(const arr::Arr<value_t> &arr) {
-    auto ins_helper = [this](const value_t &val) { insert(val); };
-    std::for_each(arr.cbegin(), arr.cend(), ins_helper);
-  }
-
 private:
   void root_splitting_insert(value_t val) {
-    typename node_t::SplitResult split_res = m_root->insert(val);
-    if (split_res.sibling != nullptr) {
-      auto new_root =
-          std::make_unique<node_t>(m_order, split_res.median, std::move(m_root),
-                                   std::move(split_res.sibling));
+    auto res = m_root->insert(val);
+    if (res.splitted) {
+      auto new_root = std::make_unique<node_t>(m_order, res.median, std::move(m_root),
+                                std::move(res.sibling));
       m_root = std::move(new_root);
     }
   }

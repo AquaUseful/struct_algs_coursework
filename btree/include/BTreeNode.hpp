@@ -5,173 +5,174 @@
 #include <cstddef>
 #include <iterator>
 #include <memory>
-
-#include "BTreeNode.hpp"
+#include <numeric>
+#include <vector>
 
 namespace btree {
-
 template <std::totally_ordered ValT> class BTreeNode final {
 public:
+  using size_t = std::size_t;
+  using difference_t = std::ptrdiff_t;
+
   using value_t = ValT;
   using value_reference_t = value_t &;
   using value_const_reference_t = const value_t &;
-  using value_ptr_t = value_t *;
-  using value_iterator_t = value_ptr_t;
-  using value_const_iterator_t = const value_ptr_t;
-  using value_difference_t =
-      decltype(std::distance(value_iterator_t{}, value_iterator_t{}));
-  using value_array_t = value_t[];
-  using value_array_ptr_t = std::unique_ptr<value_array_t>;
+
+  using value_array_t = std::vector<value_t>;
+  using value_iterator_t = typename value_array_t::iterator;
+  using value_const_iterator_t = typename value_array_t::const_iterator;
 
   using child_t = BTreeNode<value_t>;
   using child_ptr_t = std::unique_ptr<child_t>;
-  using child_ptr_array_t = child_ptr_t[];
-  using child_ptr_array_ptr_t = std::unique_ptr<child_ptr_array_t>;
-  using child_ptr_ptr_t = child_ptr_t *;
-  using child_ptr_iterator_t = child_ptr_ptr_t;
-  using child_ptr_const_iterator_t = const child_ptr_ptr_t;
-  using child_ptr_difference_t =
-      decltype(std::distance(child_ptr_iterator_t{}, child_ptr_iterator_t{}));
 
-  using parent_t = BTreeNode<value_t>;
-  using parent_reference_t = parent_t &;
-  using parent_const_reference_r = const parent_t &;
-  using parent_ptr_t = parent_t *;
+  using child_ptr_array_t = std::vector<child_ptr_t>;
+  using child_ptr_iterator_t = typename child_ptr_array_t::iterator;
+  using child_ptr_const_iterator_t = typename child_ptr_array_t::const_iterator;
 
-  using size_t = std::size_t;
-
-  struct SplitResult {
-    value_t median;
-    child_ptr_t sibling;
+  using insert_result_t = struct InsertResult {
+    bool splitted{false};
+    value_t median{};
+    child_ptr_t sibling{nullptr};
   };
 
 public:
-  BTreeNode(size_t max_size)
-      : m_values{std::make_unique<value_array_t>(max_size)},
-        m_children{std::make_unique<child_ptr_array_t>(max_size + 2)},
-        m_size{0}, m_max_size{max_size}, m_leaf{true} {};
-
-  BTreeNode(size_t max_size, value_t median, child_ptr_t left,
-            child_ptr_t right)
-      : BTreeNode(max_size) {
-    (*begin()) = median;
-    (*left_child(begin())) = std::move(left);
-    (*right_child(begin())) = std::move(right);
-    m_size = 1;
-    m_leaf = false;
-  }
-
-  ~BTreeNode() = default;
-
-  SplitResult insert(value_t val) { return std::move(splitting_insert(val)); }
-
-  void remove(value_t val) {}
-
-  bool search(value_t val) {
-    auto candidate = lower_bound(val);
-    if (*candidate != val) {
-      if (!m_leaf) {
-        return (*left_child(candidate))->search(val);
-      }
-      return false;
-    }
-    return true;
-  }
-
-  value_iterator_t begin() { return m_values.get(); }
-  value_iterator_t end() { return begin() + m_size; }
-
-  child_ptr_iterator_t left_child(value_iterator_t it) {
-    return m_children.get() + (it - m_values.get());
-  }
-  child_ptr_iterator_t right_child(value_iterator_t it) {
-    auto children_begin = m_children.get();
-    auto val_distance = it - begin();
-    auto res = children_begin + val_distance;
-    ++res;
-    return res;
-  }
-
-private:
-  value_iterator_t median() {
-    return begin() + (std::distance(begin(), end()) / 2);
-  }
-
-  value_iterator_t upper_bound(value_t val) {
-    return std::upper_bound(begin(), end(), val);
-  }
-
-  value_iterator_t lower_bound(value_t val) {
-    return std::lower_bound(begin(), end(), val);
-  }
-
-  void raw_insert(value_iterator_t pos, value_t val) {
-    std::shift_right(pos, end(), 1);
+  BTreeNode(const size_t order, bool leaf = true)
+      : m_order{order}, m_leaf{leaf} {
+    m_values.reserve(m_order);
     if (!m_leaf) {
-      std::shift_right(right_child(pos), right_child(end()), 1);
+      m_children.reserve(m_order + 1);
+      m_children.push_back(nullptr);
     }
-    *pos = val;
-    ++m_size;
   }
 
-  SplitResult splitting_insert(value_t val) {
-    value_iterator_t ipos = upper_bound(val);
+  BTreeNode(BTreeNode &sibling, value_iterator_t first,
+            child_ptr_iterator_t children_first)
+      : BTreeNode(sibling.m_order, sibling.m_leaf) {
+    m_values.resize(std::distance(first, sibling.end()));
+    std::move(first, sibling.end(), begin());
+    if (!m_leaf) {
+      m_children.resize(std::distance(children_first, sibling.children_end()));
+      std::move(children_first, sibling.children_end(), children_begin());
+    }
+  }
+
+  BTreeNode(const size_t order, value_t median, child_ptr_t left,
+            child_ptr_t right)
+      : BTreeNode(order, false) {
+    value_iterator_t ipos = insert_nosplit(begin(), median);
+    // m_children.resize(2);
+    (*left_child(ipos)) = std::move(left);
+    (*right_child(ipos)) = std::move(right);
+  }
+
+  bool search(value_t value) {
+    value_const_iterator_t candidate = lower_bound(value);
+    [[likely]] if (*candidate != value) {
+      [[likely]] if (!m_leaf) {
+        return (*left_child(candidate))->search(value);
+      } else {
+        return false;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  insert_result_t insert(value_t value) {
+    value_iterator_t ipos = upper_bound(value);
     if (m_leaf) {
-      raw_insert(ipos, val);
+      insert_nosplit(ipos, value);
     } else {
       child_ptr_iterator_t lc = left_child(ipos);
-      SplitResult insert_res = (*lc)->splitting_insert(val);
-      if (insert_res.sibling != nullptr) {
-        ipos = upper_bound(insert_res.median);
-        raw_insert(ipos, insert_res.median);
+      insert_result_t res = (*lc)->insert(value);
+      if (res.splitted) {
+        ipos = insert_nosplit(ipos, res.median);
         child_ptr_iterator_t rc = right_child(ipos);
-        (*rc) = std::move(insert_res.sibling);
+        (*rc) = std::move(res.sibling);
       }
     }
     if (max_filled()) {
       return split();
     }
-    return SplitResult{0, nullptr};
+    return insert_result_t{};
   }
 
-  SplitResult split() {
-    child_ptr_t right_sibling = std::make_unique<child_t>(m_max_size);
+private:
+  value_iterator_t begin() { return m_values.begin(); }
+  value_iterator_t end() { return m_values.end(); }
 
-    right_sibling->m_leaf = m_leaf;
-    right_sibling->move_values(median() + 1, end());
+  value_const_iterator_t cbegin() const { return m_values.cbegin(); }
+  value_const_iterator_t cend() const { return m_values.cend(); }
+
+  value_iterator_t midpoint() {
+    return std::next(begin(), std::distance(begin(), end()) / 2);
+  }
+
+  child_ptr_iterator_t children_begin() { return m_children.begin(); }
+  child_ptr_iterator_t children_end() { return m_children.end(); }
+
+  child_ptr_const_iterator_t children_cbegin() const {
+    return m_children.cbegin();
+  }
+  child_ptr_const_iterator_t children_cend() const { return m_children.cend(); }
+
+  child_ptr_iterator_t children_midpoint() {
+    return std::next(children_begin(),
+                     std::distance(children_begin(), children_end()) / 2);
+  }
+
+  child_ptr_iterator_t left_child(value_const_iterator_t pos) {
+    return std::next(m_children.begin(), std::distance(cbegin(), pos));
+  }
+  child_ptr_iterator_t right_child(value_const_iterator_t pos) {
+    return std::next(m_children.begin(), std::distance(cbegin(), pos) + 1);
+  }
+
+  child_ptr_const_iterator_t left_child(value_const_iterator_t pos) const {
+    return std::next(m_children.cbegin(), std::distance(cbegin(), pos));
+  }
+  child_ptr_const_iterator_t right_child(value_const_iterator_t pos) const {
+    return std::next(m_children.cbegin(), std::distance(cbegin(), pos) + 1);
+  }
+
+  value_iterator_t upper_bound(value_t value) {
+    return std::upper_bound(begin(), end(), value);
+  }
+  value_iterator_t lower_bound(value_t value) {
+    return std::lower_bound(begin(), end(), value);
+  }
+
+  bool min_filled() const { return m_values.size() == (m_order / 2); }
+  bool max_filled() const { return m_values.size() == m_order; }
+
+  value_iterator_t insert_nosplit(value_const_iterator_t pos, value_t value) {
     if (!m_leaf) {
-      right_sibling->move_children(right_child(median()),
-                                   right_child(end()) + 1);
+      m_children.insert(right_child(pos), nullptr);
     }
+    return m_values.insert(pos, value);
+  }
 
-    SplitResult result{*median(), std::move(right_sibling)};
+  insert_result_t split() {
+    value_iterator_t median = midpoint();
+    child_ptr_iterator_t ch_midpoint = children_midpoint();
+    child_ptr_t sibling =
+        std::make_unique<child_t>(*this, std::next(median), ch_midpoint);
 
-    m_size = std::distance(begin(), median());
+    insert_result_t result{true, *median, std::move(sibling)};
+
+    // m_values.erase(median);
+    m_values.erase(median, cend());
+    if (!m_leaf) {
+      m_children.erase(ch_midpoint, children_cend());
+    }
 
     return result;
   }
 
-  void rotate_right(value_iterator_t pos) {}
-
-  void rotate_left(value_iterator_t pos) {}
-
-  bool min_filled() const { return m_size == (m_max_size / 2); }
-  bool max_filled() const { return m_size >= m_max_size; }
-
-  void move_values(value_iterator_t first, value_iterator_t last) {
-    std::move(first, last, m_values.get());
-    m_size = std::distance(first, last);
-  }
-
-  void move_children(child_ptr_iterator_t first, child_ptr_iterator_t last) {
-    std::move(first, last, m_children.get());
-  }
-
 private:
-  child_ptr_array_ptr_t m_children;
-  value_array_ptr_t m_values;
-  size_t m_size;
-  const size_t m_max_size;
+  value_array_t m_values;
+  child_ptr_array_t m_children;
   bool m_leaf;
+  const size_t m_order;
 };
 } // namespace btree
