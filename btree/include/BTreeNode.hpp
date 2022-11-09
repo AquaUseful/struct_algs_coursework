@@ -9,6 +9,7 @@
 #include "BTreeNode.hpp"
 
 namespace btree {
+
 template <std::totally_ordered ValT> class BTreeNode final {
 public:
   using value_t = ValT;
@@ -84,7 +85,11 @@ public:
     return m_children.get() + (it - m_values.get());
   }
   child_ptr_iterator_t right_child(value_iterator_t it) {
-    return m_children.get() + (it - m_values.get()) + 1;
+    auto children_begin = m_children.get();
+    auto val_distance = it - begin();
+    auto res = children_begin + val_distance;
+    ++res;
+    return res;
   }
 
 private:
@@ -103,13 +108,11 @@ private:
   void raw_insert(value_iterator_t pos, value_t val) {
     std::shift_right(pos, end(), 1);
     if (!m_leaf) {
-      std::shift_right(right_child(pos), left_child(end()), 1);
+      std::shift_right(right_child(pos), right_child(end()), 1);
     }
     *pos = val;
     ++m_size;
   }
-
-  value_iterator_t raw_insert(value_t val) { raw_insert(upper_bound(val)); }
 
   SplitResult splitting_insert(value_t val) {
     value_iterator_t ipos = upper_bound(val);
@@ -119,6 +122,7 @@ private:
       child_ptr_iterator_t lc = left_child(ipos);
       SplitResult insert_res = (*lc)->splitting_insert(val);
       if (insert_res.sibling != nullptr) {
+        ipos = upper_bound(insert_res.median);
         raw_insert(ipos, insert_res.median);
         child_ptr_iterator_t rc = right_child(ipos);
         (*rc) = std::move(insert_res.sibling);
@@ -127,7 +131,7 @@ private:
     if (max_filled()) {
       return split();
     }
-    return SplitResult(0, nullptr);
+    return SplitResult{0, nullptr};
   }
 
   SplitResult split() {
@@ -164,8 +168,8 @@ private:
   }
 
 private:
-  value_array_ptr_t m_values;
   child_ptr_array_ptr_t m_children;
+  value_array_ptr_t m_values;
   size_t m_size;
   const size_t m_max_size;
   bool m_leaf;

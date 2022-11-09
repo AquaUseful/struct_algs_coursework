@@ -4,6 +4,7 @@
 #include <concepts>
 #include <memory>
 
+#include "Arr.hpp"
 #include "BTreeNode.hpp"
 
 namespace btree {
@@ -13,6 +14,8 @@ public:
 
   using node_t = BTreeNode<value_t>;
   using node_ptr_t = std::unique_ptr<node_t>;
+
+  using value_iterator_t = typename node_t::value_iterator_t;
 
   using order_t = typename node_t::size_t;
 
@@ -39,6 +42,11 @@ public:
   }
 
   void remove(value_t val) {}
+
+  void from_array_data(const arr::Arr<value_t> &arr) {
+    auto ins_helper = [this](const value_t &val) { insert(val); };
+    std::for_each(arr.cbegin(), arr.cend(), ins_helper);
+  }
 
 private:
   void root_splitting_insert(value_t val) {
