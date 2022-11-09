@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 
+add_subdirectory(arr)
 add_subdirectory(ui)
 add_subdirectory(btree)
 add_subdirectory(main)
