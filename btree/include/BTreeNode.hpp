@@ -1,6 +1,5 @@
 #pragma once
 
-#include "BTreeNodeIterator.hpp"
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
@@ -8,6 +7,8 @@
 #include <memory>
 #include <numeric>
 #include <vector>
+
+#include "BTree.hpp"
 
 namespace btree {
 template <std::totally_ordered ValT> class BTreeNode final {
@@ -30,17 +31,10 @@ public:
   using node_ptr_iterator_t = typename node_ptr_array_t::iterator;
   using node_ptr_const_iterator_t = typename node_ptr_array_t::const_iterator;
 
-  using iterator_t = BTreeNodeIterator<BTreeNode>;
-
   using insert_result_t = struct InsertResult {
     bool splitted{false};
     value_t median{};
     node_ptr_t sibling{nullptr};
-  };
-
-  using search_result_t = struct SearchResult {
-    bool found{false};
-    value_iterator_t lower_bound;
   };
 
 public:
@@ -73,11 +67,15 @@ public:
   }
 
   bool search(value_t value) {
-    search_result_t res = search_single_node(value);
-    if (m_leaf) {
-      return res.found;
+    value_iterator_t lb = lower_bound(value);
+    if (*lb == value) {
+      return true;
     } else {
-      return (*res.search_resume_node)->search(value);
+      if (m_leaf) {
+        return false;
+      } else {
+        return (*left_child(lb))->search(value);
+      }
     }
   }
 
@@ -94,23 +92,31 @@ public:
         (*rc) = std::move(res.sibling);
       }
     }
-    if (max_filled()) {
+    if (overfilled()) {
       return split();
     }
     return insert_result_t{};
   }
 
   void erase(value_t value) {
-    search_result_t sres = search_single_node(value);
-    if (sres.found) {
+    value_iterator_t lb = lower_bound(value);
+    if (*lb == value) {
       if (m_leaf) {
-        erase_leaf(sres.lower_bound);
+        m_values.erase(lb);
       } else {
+        *lb = (*left_child(lb))->pop_max();
       }
     } else {
-      (*sres.search_resume_node)->erase(value);
+      if (!m_leaf) {
+        node_ptr_iterator_t lc = left_child(lb);
+        (*lc)->erase(value);
+        refill(lc);
+      }
     }
   }
+
+  bool empty() const { return m_values.empty(); }
+  node_ptr_t root_replacement() { return std::move(*children_begin()); }
 
 private:
   value_iterator_t begin() { return m_values.begin(); }
@@ -151,10 +157,10 @@ private:
   }
 
   value_iterator_t left_value(node_ptr_iterator_t node) {
-    return std::next(begin(), std::distance(children_begin(), node));
+    return std::next(begin(), std::distance(children_begin(), node) - 1);
   }
   value_iterator_t right_value(node_ptr_iterator_t node) {
-    return std::next(begin(), std::distance(children_begin(), node) + 1);
+    return std::next(begin(), std::distance(children_begin(), node));
   }
 
   value_iterator_t upper_bound(value_t value) {
@@ -164,8 +170,8 @@ private:
     return std::lower_bound(begin(), end(), value);
   }
 
-  bool min_filled() const { return m_values.size() == (m_order / 2); }
-  bool max_filled() const { return m_values.size() == m_order; }
+  bool underfilled() const { return m_values.size() <= (m_order / 2); }
+  bool overfilled() const { return m_values.size() >= m_order; }
 
   value_iterator_t insert_nosplit(value_const_iterator_t pos, value_t value) {
     if (!m_leaf) {
@@ -174,7 +180,13 @@ private:
     return m_values.insert(pos, value);
   }
 
-  void erase_leaf(value_const_iterator_t pos) { m_values.erase(pos); }
+  value_iterator_t insert_nosplit_last(value_t value) {
+    return insert_nosplit(end(), value);
+  }
+
+  value_iterator_t insert_nosplit_first(value_t value) {
+    return insert_nosplit(begin(), value);
+  }
 
   value_t pop_max() {
     value_iterator_t maxi = std::prev(end());
@@ -183,14 +195,25 @@ private:
       m_values.erase(maxi);
       return max;
     } else {
-      node_ptr_iterator_t mc = std::prev(children_end());
-      return (*mc)->pop_max();
+      node_ptr_iterator_t maxc = std::prev(children_end());
+      value_t max = (*maxc)->pop_max();
+      refill(maxc);
+      return max;
     }
   }
 
-  search_result_t search_single_node(value_t value) {
-    value_iterator_t lb = lower_bound(value);
-    return search_result_t{*lb == value, lb, left_child(lb)};
+  value_t pop_min() {
+    value_iterator_t mini = begin();
+    if (m_leaf) {
+      value_t min = *mini;
+      m_values.erase(mini);
+      return min;
+    } else {
+      node_ptr_iterator_t minc = children_begin();
+      value_t min = (*minc)->pop_min();
+      refill(minc);
+      return min;
+    }
   }
 
   insert_result_t split() {
@@ -210,21 +233,85 @@ private:
     return result;
   }
 
-  void rotate_right(value_iterator_t pos) {
-    node_ptr_iterator_t lc = left_child(pos);
-    node_ptr_iterator_t rc = right_child(pos);
-    (*rc)->insert_nosplit((*rc)->begin(), *pos);
-    *pos = (*lc)->pop_max();
-  };
-
-  void rotate_left(value_iterator_t pos) {
-    node_ptr_iterator_t lc = left_child(pos);
-    node_ptr_iterator_t rc = right_child(pos);
-    (*lc)->insert_nosplit((*rc)->end(), *pos);
-    *pos = (*rc)->pop_min();
+  void refill(node_ptr_iterator_t chld) {
+    if (!((*chld)->underfilled())) {
+      return;
+    }
+    if ((*chld)->m_leaf) {
+      if (borrow(chld)) {
+        return;
+      }
+    }
+    if (chld == std::prev(children_end())) {
+      [[unlikely]] merge_with_left(chld);
+    } else {
+      [[likely]] merge_with_right(chld);
+    }
   }
 
-  void merge(value_t mid){};
+  void merge_with_left(node_ptr_iterator_t chld) {
+    value_iterator_t lval = left_value(chld);
+    node_ptr_iterator_t lsib = std::prev(chld);
+    (*lsib)->merge(*lval, std::move(*chld));
+    m_values.erase(lval);
+    // m_children.erase(chld);
+  }
+
+  void merge_with_right(node_ptr_iterator_t chld) {
+    value_iterator_t rval = right_value(chld);
+    node_ptr_iterator_t rsib = std::next(chld);
+    (*chld)->merge(*rval, std::move(*rsib));
+    m_values.erase(rval);
+    m_children.erase(rsib);
+  }
+
+  bool borrow_from_left(node_ptr_iterator_t chld) {
+    value_iterator_t val = left_value(chld);
+    node_ptr_iterator_t sibling = std::prev(chld);
+    if (!(*sibling)->underfilled()) {
+      (*chld)->insert_nosplit_first(*val);
+      (*val) = (*sibling)->pop_max();
+      return true;
+    }
+    return false;
+  };
+
+  bool borrow_from_right(node_ptr_iterator_t chld) {
+    value_iterator_t val = right_value(chld);
+    node_ptr_iterator_t sibling = std::next(chld);
+    if (!(*sibling)->underfilled()) {
+      (*chld)->insert_nosplit_last(*val);
+      (*val) = (*sibling)->pop_min();
+      return true;
+    }
+    return false;
+  };
+
+  bool borrow(node_ptr_iterator_t chld) {
+    node_ptr_iterator_t left = std::prev(chld);
+    node_ptr_iterator_t right = std::next(chld);
+    if (chld == children_begin()) {
+      return borrow_from_right(chld);
+    } else if (chld == std::prev(children_end())) {
+      return borrow_from_left(chld);
+    } else {
+      if (borrow_from_left(chld)) {
+        return true;
+      }
+      return borrow_from_right(chld);
+    }
+  }
+
+  void merge(value_t mid, node_ptr_t right) {
+    value_iterator_t ipos = insert_nosplit_last(mid);
+    m_values.resize(m_values.size() + right->m_values.size());
+    m_children.resize(m_children.size() + right->m_children.size());
+    if (!m_leaf) {
+      std::move(right->children_begin(), right->children_end(),
+                right_child(ipos));
+    }
+    std::move(right->begin(), right->end(), std::next(ipos));
+  };
 
 private:
   value_array_t m_values;
