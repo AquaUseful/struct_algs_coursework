@@ -41,14 +41,21 @@ public:
     return m_root->search(val);
   }
 
-  void remove(value_t val) {}
+  void erase(value_t val) {
+    if (m_root != nullptr) {
+      m_root->erase(val);
+      if (m_root->empty()) {
+        m_root = std::move(m_root->root_replacement());
+      }
+    }
+  }
 
 private:
   void root_splitting_insert(value_t val) {
     auto res = m_root->insert(val);
     if (res.splitted) {
-      auto new_root = std::make_unique<node_t>(m_order, res.median, std::move(m_root),
-                                std::move(res.sibling));
+      auto new_root = std::make_unique<node_t>(
+          m_order, res.median, std::move(m_root), std::move(res.sibling));
       m_root = std::move(new_root);
     }
   }
