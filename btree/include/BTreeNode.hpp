@@ -254,7 +254,7 @@ private:
     node_ptr_iterator_t lsib = std::prev(chld);
     (*lsib)->merge(*lval, std::move(*chld));
     m_values.erase(lval);
-    // m_children.erase(chld);
+    m_children.erase(chld);
   }
 
   void merge_with_right(node_ptr_iterator_t chld) {
