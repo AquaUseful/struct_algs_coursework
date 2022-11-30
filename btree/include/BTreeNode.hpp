@@ -8,8 +8,6 @@
 #include <numeric>
 #include <vector>
 
-#include "BTree.hpp"
-
 namespace btree {
 template <std::totally_ordered ValT> class BTreeNode final {
 public:
@@ -115,15 +113,33 @@ public:
     }
   }
 
+  value_const_reference_t subtree_min() const {
+    if (m_leaf) {
+      return front();
+    } else {
+      return m_children.front().subtree_min();
+    }
+  }
+  value_const_reference_t subtree_max() const {
+    if (m_leaf) {
+      return back();
+    } else {
+      return m_children.back().subtree_max();
+    }
+  }
+
   bool empty() const { return m_values.empty(); }
   node_ptr_t root_replacement() { return std::move(*children_begin()); }
+
+  value_const_iterator_t cbegin() const { return m_values.cbegin(); }
+  value_const_iterator_t cend() const { return m_values.cend(); }
+
+  value_const_reference_t front() const { return m_values.front(); }
+  value_const_reference_t back() const { return m_values.back(); }
 
 private:
   value_iterator_t begin() { return m_values.begin(); }
   value_iterator_t end() { return m_values.end(); }
-
-  value_const_iterator_t cbegin() const { return m_values.cbegin(); }
-  value_const_iterator_t cend() const { return m_values.cend(); }
 
   value_iterator_t midpoint() {
     return std::next(begin(), std::distance(begin(), end()) / 2);
@@ -223,8 +239,6 @@ private:
         std::make_unique<node_t>(*this, std::next(median), ch_midpoint);
 
     insert_result_t result{true, *median, std::move(sibling)};
-
-    // m_values.erase(median);
     m_values.erase(median, cend());
     if (!m_leaf) {
       m_children.erase(ch_midpoint, children_cend());
