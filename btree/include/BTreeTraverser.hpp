@@ -30,10 +30,12 @@ public:
     if (m_queue.empty()) {
       [[unlikely]] return;
     }
-    for (node_ptr_iterator_t i = (*m_queue.front())->children_begin();
-         i != (*m_queue.front())->children_end(); std::advance(i, 1)) {
-      m_queue.push(&*i);
-    }
+
+    const auto first = (*m_queue.front())->children_begin();
+    const auto last = (*m_queue.front())->children_end();
+    std::for_each(first, last,
+                  [this](node_ptr_t &child) { m_queue.push(&child); });
+
     m_queue.pop();
   }
   node_ptr_ptr_t current_node() const {
