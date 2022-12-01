@@ -8,8 +8,15 @@
 #include <numeric>
 #include <vector>
 
+#include "BTree.hpp"
+#include "BTreeTraverser.hpp"
+
 namespace btree {
+template <std::totally_ordered> class BTree;
+
 template <std::totally_ordered ValT> class BTreeNode final {
+  friend class BTree<ValT>;
+
 public:
   using size_t = std::size_t;
   using difference_t = std::ptrdiff_t;
@@ -23,6 +30,8 @@ public:
   using value_const_iterator_t = typename value_array_t::const_iterator;
 
   using node_t = BTreeNode;
+  using node_reference_t = node_t &;
+  using node_const_reference_t = const node_t &;
   using node_ptr_t = std::unique_ptr<node_t>;
 
   using node_ptr_array_t = std::vector<node_ptr_t>;
@@ -66,7 +75,7 @@ public:
 
   bool search(value_t value) {
     value_iterator_t lb = lower_bound(value);
-    if (*lb == value) {
+    if ((lb != end()) && (*lb == value)) {
       return true;
     } else {
       if (m_leaf) {
@@ -98,7 +107,7 @@ public:
 
   void erase(value_t value) {
     value_iterator_t lb = lower_bound(value);
-    if (*lb == value) {
+    if ((lb != end()) && (*lb == value)) {
       if (m_leaf) {
         m_values.erase(lb);
       } else {
@@ -137,6 +146,14 @@ public:
   value_const_reference_t front() const { return m_values.front(); }
   value_const_reference_t back() const { return m_values.back(); }
 
+  node_ptr_const_iterator_t children_cbegin() const {
+    return m_children.cbegin();
+  }
+  node_ptr_const_iterator_t children_cend() const { return m_children.cend(); }
+
+  node_ptr_iterator_t children_begin() { return m_children.begin(); }
+  node_ptr_iterator_t children_end() { return m_children.end(); }
+
 private:
   value_iterator_t begin() { return m_values.begin(); }
   value_iterator_t end() { return m_values.end(); }
@@ -144,14 +161,6 @@ private:
   value_iterator_t midpoint() {
     return std::next(begin(), std::distance(begin(), end()) / 2);
   }
-
-  node_ptr_iterator_t children_begin() { return m_children.begin(); }
-  node_ptr_iterator_t children_end() { return m_children.end(); }
-
-  node_ptr_const_iterator_t children_cbegin() const {
-    return m_children.cbegin();
-  }
-  node_ptr_const_iterator_t children_cend() const { return m_children.cend(); }
 
   node_ptr_iterator_t children_midpoint() {
     return std::next(children_begin(),

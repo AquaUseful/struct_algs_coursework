@@ -6,18 +6,24 @@
 
 #include "Arr.hpp"
 #include "BTreeNode.hpp"
+#include "BTreeTraverser.hpp"
 
 namespace btree {
+template <std::totally_ordered> class BTreeNode;
+
 template <std::totally_ordered ValT> class BTree final {
 public:
   using value_t = ValT;
 
   using node_t = BTreeNode<value_t>;
   using node_ptr_t = std::unique_ptr<node_t>;
+  using node_ptr_iterator_t = typename node_t::node_ptr_iterator_t;
 
   using value_iterator_t = typename node_t::value_iterator_t;
 
   using order_t = typename node_t::size_t;
+
+  using traverser_t = BTreeTraverser<node_t>;
 
   BTree(order_t order) : m_order{order}, m_root{nullptr} {}
   BTree(const BTree &) = default;
@@ -49,6 +55,8 @@ public:
       }
     }
   }
+
+  traverser_t traverser() { return traverser_t(&m_root); }
 
 private:
   void root_splitting_insert(value_t val) {
