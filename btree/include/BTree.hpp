@@ -57,6 +57,7 @@ public:
   }
 
   traverser_t traverser() { return traverser_t(&m_root); }
+  node_t *root() { return m_root.get(); }
 
 private:
   void root_splitting_insert(value_t val) {

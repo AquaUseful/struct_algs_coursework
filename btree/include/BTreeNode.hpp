@@ -44,6 +44,11 @@ public:
     node_ptr_t sibling{nullptr};
   };
 
+  using borrow_result_t = struct BorrowResult {
+    value_t value{};
+    node_ptr_t node{nullptr};
+  };
+
 public:
   BTreeNode(const size_t order, bool leaf = true)
       : m_order{order}, m_leaf{leaf} {
@@ -111,7 +116,7 @@ public:
       if (m_leaf) {
         m_values.erase(lb);
       } else {
-        *lb = (*left_child(lb))->pop_max();
+        *lb = (*left_child(lb))->pop_max_subtree();
       }
     } else {
       if (!m_leaf) {
@@ -126,19 +131,24 @@ public:
     if (m_leaf) {
       return front();
     } else {
-      return m_children.front().subtree_min();
+      return m_children.front()->subtree_min();
     }
   }
   value_const_reference_t subtree_max() const {
     if (m_leaf) {
       return back();
     } else {
-      return m_children.back().subtree_max();
+      return m_children.back()->subtree_max();
     }
   }
 
   bool empty() const { return m_values.empty(); }
-  node_ptr_t root_replacement() { return std::move(*children_begin()); }
+  node_ptr_t root_replacement() {
+    if (m_children.empty()) {
+      return nullptr;
+    }
+    return std::move(*children_begin());
+  }
 
   value_const_iterator_t cbegin() const { return m_values.cbegin(); }
   value_const_iterator_t cend() const { return m_values.cend(); }
@@ -154,19 +164,6 @@ public:
   node_ptr_iterator_t children_begin() { return m_children.begin(); }
   node_ptr_iterator_t children_end() { return m_children.end(); }
 
-private:
-  value_iterator_t begin() { return m_values.begin(); }
-  value_iterator_t end() { return m_values.end(); }
-
-  value_iterator_t midpoint() {
-    return std::next(begin(), std::distance(begin(), end()) / 2);
-  }
-
-  node_ptr_iterator_t children_midpoint() {
-    return std::next(children_begin(),
-                     std::distance(children_begin(), children_end()) / 2);
-  }
-
   node_ptr_iterator_t left_child(value_const_iterator_t pos) {
     return std::next(m_children.begin(), std::distance(cbegin(), pos));
   }
@@ -179,6 +176,21 @@ private:
   }
   node_ptr_const_iterator_t right_child(value_const_iterator_t pos) const {
     return std::next(m_children.cbegin(), std::distance(cbegin(), pos) + 1);
+  }
+
+  value_iterator_t begin() { return m_values.begin(); }
+  value_iterator_t end() { return m_values.end(); }
+
+  bool leaf() const { return m_leaf; }
+
+private:
+  value_iterator_t midpoint() {
+    return std::next(begin(), std::distance(begin(), end() - 1) / 2);
+  }
+
+  node_ptr_iterator_t children_midpoint() {
+    return std::next(children_begin(),
+                     std::distance(children_begin(), children_end() - 1) / 2);
   }
 
   value_iterator_t left_value(node_ptr_iterator_t node) {
@@ -195,7 +207,7 @@ private:
     return std::lower_bound(begin(), end(), value);
   }
 
-  bool underfilled() const { return m_values.size() <= (m_order / 2); }
+  bool underfilled() const { return m_values.size() <= (m_order / 2 - 1); }
   bool overfilled() const { return m_values.size() >= m_order; }
 
   value_iterator_t insert_nosplit(value_const_iterator_t pos, value_t value) {
@@ -213,7 +225,7 @@ private:
     return insert_nosplit(begin(), value);
   }
 
-  value_t pop_max() {
+  value_t pop_max_subtree() {
     value_iterator_t maxi = std::prev(end());
     if (m_leaf) {
       value_t max = *maxi;
@@ -221,13 +233,13 @@ private:
       return max;
     } else {
       node_ptr_iterator_t maxc = std::prev(children_end());
-      value_t max = (*maxc)->pop_max();
+      value_t max = (*maxc)->pop_max_subtree();
       refill(maxc);
       return max;
     }
   }
 
-  value_t pop_min() {
+  value_t pop_min_subtree() {
     value_iterator_t mini = begin();
     if (m_leaf) {
       value_t min = *mini;
@@ -235,10 +247,36 @@ private:
       return min;
     } else {
       node_ptr_iterator_t minc = children_begin();
-      value_t min = (*minc)->pop_min();
+      value_t min = (*minc)->pop_min_subtree();
       refill(minc);
       return min;
     }
+  }
+
+  borrow_result_t borrow_min() {
+    borrow_result_t result{};
+    value_iterator_t mini = begin();
+    result.value = *mini;
+    m_values.erase(mini);
+    if (!m_leaf) {
+      node_ptr_iterator_t minc = children_begin();
+      result.node = std::move(*minc);
+      m_children.erase(minc);
+    }
+    return result;
+  }
+
+  borrow_result_t borrow_max() {
+    borrow_result_t result{};
+    value_iterator_t maxi = std::prev(end());
+    result.value = *maxi;
+    m_values.erase(maxi);
+    if (!m_leaf) {
+      node_ptr_iterator_t maxc = std::prev(children_end());
+      result.node = std::move(*maxc);
+      m_children.erase(maxc);
+    }
+    return result;
   }
 
   insert_result_t split() {
@@ -260,15 +298,13 @@ private:
     if (!((*chld)->underfilled())) {
       return;
     }
-    if ((*chld)->m_leaf) {
-      if (borrow(chld)) {
-        return;
-      }
+    if (borrow(chld)) {
+      return;
     }
-    if (chld == std::prev(children_end())) {
-      [[unlikely]] merge_with_left(chld);
-    } else {
-      [[likely]] merge_with_right(chld);
+    if (chld == std::prev(children_end())) [[unlikely]] {
+      merge_with_left(chld);
+    } else [[likely]] {
+      merge_with_right(chld);
     }
   }
 
@@ -293,7 +329,11 @@ private:
     node_ptr_iterator_t sibling = std::prev(chld);
     if (!(*sibling)->underfilled()) {
       (*chld)->insert_nosplit_first(*val);
-      (*val) = (*sibling)->pop_max();
+      borrow_result_t borow_res = (*sibling)->borrow_max();
+      *val = borow_res.value;
+      if (borow_res.node != nullptr) {
+        (*chld)->m_children.front() = std::move(borow_res.node);
+      }
       return true;
     }
     return false;
@@ -304,7 +344,11 @@ private:
     node_ptr_iterator_t sibling = std::next(chld);
     if (!(*sibling)->underfilled()) {
       (*chld)->insert_nosplit_last(*val);
-      (*val) = (*sibling)->pop_min();
+      borrow_result_t borrow_res = (*sibling)->borrow_min();
+      *val = borrow_res.value;
+      if (borrow_res.node != nullptr) {
+        (*chld)->m_children.back() = std::move(borrow_res.node);
+      }
       return true;
     }
     return false;
