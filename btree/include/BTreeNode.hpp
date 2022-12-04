@@ -92,12 +92,12 @@ public:
   }
 
   insert_result_t insert(value_t value) {
-    value_iterator_t ipos = upper_bound(value);
+    value_iterator_t ipos = lower_bound(value);
     if (m_leaf) {
       insert_nosplit(ipos, value);
     } else {
-      node_ptr_iterator_t lc = left_child(ipos);
-      insert_result_t res = (*lc)->insert(value);
+      node_ptr_iterator_t ichild = left_child(ipos);
+      insert_result_t res = (*ichild)->insert(value);
       if (res.splitted) {
         ipos = insert_nosplit(ipos, res.median);
         node_ptr_iterator_t rc = right_child(ipos);
@@ -116,7 +116,9 @@ public:
       if (m_leaf) {
         m_values.erase(lb);
       } else {
-        *lb = (*left_child(lb))->pop_max_subtree();
+        node_ptr_iterator_t lc = left_child(lb);
+        *lb = (*lc)->pop_max_subtree();
+        refill(lc);
       }
     } else {
       if (!m_leaf) {
@@ -190,7 +192,7 @@ private:
 
   node_ptr_iterator_t children_midpoint() {
     return std::next(children_begin(),
-                     std::distance(children_begin(), children_end() - 1) / 2);
+                     std::distance(children_begin(), children_end()) / 2);
   }
 
   value_iterator_t left_value(node_ptr_iterator_t node) {
@@ -207,8 +209,9 @@ private:
     return std::lower_bound(begin(), end(), value);
   }
 
-  bool underfilled() const { return m_values.size() <= (m_order / 2 - 1); }
-  bool overfilled() const { return m_values.size() >= m_order; }
+  bool underfilled() const { return m_values.size() < ((m_order - 1) / 2); }
+  bool minfilled() const { return m_values.size() <= ((m_order - 1) / 2); }
+  bool overfilled() const { return m_values.size() >= (m_order); }
 
   value_iterator_t insert_nosplit(value_const_iterator_t pos, value_t value) {
     if (!m_leaf) {
@@ -327,12 +330,13 @@ private:
   bool borrow_from_left(node_ptr_iterator_t chld) {
     value_iterator_t val = left_value(chld);
     node_ptr_iterator_t sibling = std::prev(chld);
-    if (!(*sibling)->underfilled()) {
-      (*chld)->insert_nosplit_first(*val);
+    if (!(*sibling)->minfilled()) {
+      (*chld)->m_values.insert((*chld)->begin(), *val);
       borrow_result_t borow_res = (*sibling)->borrow_max();
       *val = borow_res.value;
       if (borow_res.node != nullptr) {
-        (*chld)->m_children.front() = std::move(borow_res.node);
+        (*chld)->m_children.insert((*chld)->children_begin(),
+                                   std::move(borow_res.node));
       }
       return true;
     }
@@ -342,12 +346,12 @@ private:
   bool borrow_from_right(node_ptr_iterator_t chld) {
     value_iterator_t val = right_value(chld);
     node_ptr_iterator_t sibling = std::next(chld);
-    if (!(*sibling)->underfilled()) {
-      (*chld)->insert_nosplit_last(*val);
+    if (!(*sibling)->minfilled()) {
+      (*chld)->m_values.push_back(*val);
       borrow_result_t borrow_res = (*sibling)->borrow_min();
       *val = borrow_res.value;
       if (borrow_res.node != nullptr) {
-        (*chld)->m_children.back() = std::move(borrow_res.node);
+        (*chld)->m_children.push_back(std::move(borrow_res.node));
       }
       return true;
     }
@@ -370,10 +374,10 @@ private:
   }
 
   void merge(value_t mid, node_ptr_t right) {
-    value_iterator_t ipos = insert_nosplit_last(mid);
+    value_iterator_t ipos = insert_nosplit(end(), mid);
     m_values.resize(m_values.size() + right->m_values.size());
-    m_children.resize(m_children.size() + right->m_children.size());
     if (!m_leaf) {
+      m_children.resize(m_children.size() + right->m_children.size() - 1);
       std::move(right->children_begin(), right->children_end(),
                 right_child(ipos));
     }
