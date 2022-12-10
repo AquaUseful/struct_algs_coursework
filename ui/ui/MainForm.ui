@@ -116,7 +116,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QSpinBox" name="replToBtn"/>
+              <widget class="QSpinBox" name="replToVal"/>
              </item>
              <item>
               <widget class="QPushButton" name="replaceButton">
@@ -167,7 +167,174 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_7">
            <item>
-            <widget class="QGraphicsView" name="graphicsView_2"/>
+            <widget class="QTreeWidget" name="visualisation">
+             <property name="showDropIndicator" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="indentation">
+              <number>35</number>
+             </property>
+             <property name="rootIsDecorated">
+              <bool>false</bool>
+             </property>
+             <property name="itemsExpandable">
+              <bool>true</bool>
+             </property>
+             <property name="sortingEnabled">
+              <bool>false</bool>
+             </property>
+             <property name="animated">
+              <bool>false</bool>
+             </property>
+             <property name="allColumnsShowFocus">
+              <bool>true</bool>
+             </property>
+             <property name="headerHidden">
+              <bool>false</bool>
+             </property>
+             <column>
+              <property name="text">
+               <string>значение(я)</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>тип</string>
+              </property>
+             </column>
+             <item>
+              <property name="text">
+               <string>25</string>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>8</pointsize>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>узел</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>25</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>ключ</string>
+               </property>
+              </item>
+             </item>
+             <item>
+              <property name="text">
+               <string>20</string>
+              </property>
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>ключ</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>15-16</string>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>8</pointsize>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>узел</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>16</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>ключ</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>15</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>ключ</string>
+               </property>
+              </item>
+             </item>
+             <item>
+              <property name="text">
+               <string>11</string>
+              </property>
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>ключ</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>10</string>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>8</pointsize>
+                <italic>true</italic>
+               </font>
+              </property>
+              <property name="text">
+               <string>узел</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>10</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>ключ</string>
+               </property>
+              </item>
+             </item>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -231,7 +398,7 @@
         <item>
          <widget class="QTabWidget" name="tabWidget_2">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_3">
            <attribute name="title">

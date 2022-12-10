@@ -40,7 +40,7 @@ public:
     root_splitting_insert(val);
   }
 
-  bool search(value_t val) {
+  bool search(value_t val) const {
     if (m_root == nullptr) {
       return false;
     }

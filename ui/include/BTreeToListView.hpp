@@ -2,6 +2,9 @@
 
 #include <concepts>
 #include <iterator>
+#include <qapplication.h>
+#include <qfont.h>
+#include <qfontinfo.h>
 #include <qlayoutitem.h>
 #include <qtreewidget.h>
 #include <string>
@@ -13,19 +16,27 @@ namespace ui {
 static const QString key_item_name{"ключ"};
 static const QString node_item_name{"узел"};
 static const QString empty_placeholder{"пусто"};
-
+/*
+static const QFontInfo font_info = QApplication::font();
+static const QFont key_font = QFont{font_info.family()};
+*/
 template <std::totally_ordered ValT>
 QTreeWidgetItem *leaf_to_treeitem(btree::BTreeNode<ValT> *node) {
   auto item = new QTreeWidgetItem();
+
   item->setText(0, QString::number(node->subtree_min()) + " - " +
                        QString::number(node->subtree_max()));
   item->setText(1, node_item_name);
+
   for (const auto &val : *node) {
     auto i = new QTreeWidgetItem();
     i->setText(0, QString::number(val));
+    //i->setFont(0, key_font);
     i->setText(1, key_item_name);
     item->addChild(i);
   }
+
+  item->setExpanded(true);
   return item;
 }
 
@@ -52,6 +63,8 @@ QTreeWidgetItem *subtree_to_treeitem(btree::BTreeNode<ValT> *node) {
 
   auto right_child = node->right_child(std::prev(node->end()));
   item->addChild(subtree_to_treeitem(right_child->get()));
+
+  item->setExpanded(true);
   return item;
 }
 
