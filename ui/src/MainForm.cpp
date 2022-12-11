@@ -11,12 +11,13 @@
 #include "BTreeToListView.hpp"
 #include "InteractiveTreeWorker.hpp"
 
-ui::MainForm::MainForm(QWidget* parent) : QMainWindow(parent), ui {std::make_unique<Ui::MainWindow>()} {
+ui::MainForm::MainForm(QWidget* parent)
+  : QMainWindow(parent),
+    ui {std::make_unique<Ui::MainWindow>()},
+    m_tree_thread {new QThread(this)},
+    m_tree_worker(new InteractiveTreeWorker()) {
   ui->setupUi(this);
   ui->retranslateUi(this);
-
-  m_tree_thread = new QThread();
-  m_tree_worker = new InteractiveTreeWorker();
 
   m_tree_worker->moveToThread(m_tree_thread);
 
