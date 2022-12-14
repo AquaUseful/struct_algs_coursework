@@ -2,7 +2,9 @@
 #include "BenchmarkWorker.hpp"
 #include "ui_MainForm.h"
 
+#include <cmath>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <qboxlayout.h>
 #include <qchart.h>
@@ -17,6 +19,7 @@
 #include <qwidget.h>
 
 #include <iostream>
+#include <numeric>
 
 #include "BTreeToListView.hpp"
 #include "InteractiveTreeWorker.hpp"
@@ -30,6 +33,17 @@ ui::MainForm::MainForm(QWidget* parent)
     m_bench_worker(new BenchmarkWorker()) {
   ui->setupUi(this);
   ui->retranslateUi(this);
+
+  ui->searchVal->setMaximum(std::numeric_limits<value_t>::max());
+  ui->searchVal->setMinimum(std::numeric_limits<value_t>::min());
+  ui->addVal->setMaximum(std::numeric_limits<value_t>::max());
+  ui->addVal->setMinimum(std::numeric_limits<value_t>::min());
+  ui->delVal->setMaximum(std::numeric_limits<value_t>::max());
+  ui->delVal->setMinimum(std::numeric_limits<value_t>::min());
+  ui->replFromVal->setMaximum(std::numeric_limits<value_t>::max());
+  ui->replFromVal->setMinimum(std::numeric_limits<value_t>::min());
+  ui->replToVal->setMaximum(std::numeric_limits<value_t>::max());
+  ui->replToVal->setMinimum(std::numeric_limits<value_t>::min());
 
   m_tree_worker->moveToThread(m_tree_thread);
   m_bench_worker->moveToThread(m_bench_thread);
@@ -63,16 +77,19 @@ void ui::MainForm::configure_slots() {
   connect(this, SIGNAL(interactiveInsert(value_t)), m_tree_worker, SLOT(insert(value_t)));
   connect(this, SIGNAL(interactiveErase(value_t)), m_tree_worker, SLOT(erase(value_t)));
   connect(this, SIGNAL(interacitveReplace(value_t, value_t)), m_tree_worker, SLOT(replace(value_t, value_t)));
+  connect(this, SIGNAL(interactiveSearch(value_t)), m_tree_worker, SLOT(search(value_t)));
 
   qRegisterMetaType<order_t>("order_t");
   qRegisterMetaType<size_t>("size_t");
   connect(this, SIGNAL(startChartWorker(size_t, order_t)), m_bench_worker, SLOT(startMeasurements(size_t, order_t)));
 
   connect(m_tree_worker, SIGNAL(treeUpdated(QTreeWidgetItem*)), this, SLOT(updateTree(QTreeWidgetItem*)));
+  connect(m_tree_worker, SIGNAL(searchFinished(bool)), this, SLOT(updateSearchResult(bool)));
   connect(m_bench_worker,
           SIGNAL(measurementsFinished(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*)),
           this,
           SLOT(addSeries(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*)));
+  connect(m_bench_worker, SIGNAL(measurementStepFinished(int)), this, SLOT(updateChartProgress(int)));
 }
 
 void ui::MainForm::interactiveInsert() {
@@ -88,7 +105,8 @@ void ui::MainForm::interacitveReplace() {
 }
 
 void ui::MainForm::interactiveSearch() {
-  emit interactiveSearch(0);
+  const value_t search_val = ui->searchVal->value();
+  emit interactiveSearch(search_val);
 }
 
 void ui::MainForm::updateTree(QTreeWidgetItem* item) {
@@ -111,9 +129,18 @@ void ui::MainForm::addSeries(QtCharts::QSplineSeries* arr_series, QtCharts::QSpl
   chart->addSeries(tree_series);
   chart->createDefaultAxes();
 
-  //auto chart_view = new QtCharts::QChartView(chart);
   ui->chart->setChart(chart);
-  //auto layout = ui->chartTab->layout();
-  
- // layout->addWidget(chart_view);
+  ui->chartProgress->setValue(ui->chartProgress->maximum());
+}
+
+void ui::MainForm::updateSearchResult(bool result) {
+  if (result) {
+    ui->searchResult->setText("НАЙДЕНО");
+  } else {
+    ui->searchResult->setText("НЕ НАЙДЕНО");
+  }
+}
+
+void ui::MainForm::updateChartProgress(int percent) {
+  ui->chartProgress->setValue(percent);
 }

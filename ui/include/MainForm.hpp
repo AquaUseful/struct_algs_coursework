@@ -47,7 +47,7 @@ namespace ui {
     void updateChart();
     void addSeries(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*);
     void updateSearchResult(bool);
-    void updateChartProgress(std::double_t);
+    void updateChartProgress(int);
 
   signals:
     void interactiveInsert(value_t);
