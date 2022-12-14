@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -373,7 +373,7 @@
         <item>
          <widget class="QTabWidget" name="tabWidget_2">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_3">
            <attribute name="title">
@@ -391,7 +391,32 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QTableWidget" name="tableWidget"/>
+             <widget class="QTableWidget" name="tableWidget">
+              <attribute name="horizontalHeaderCascadingSectionResizes">
+               <bool>false</bool>
+              </attribute>
+              <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+               <bool>false</bool>
+              </attribute>
+              <attribute name="horizontalHeaderStretchLastSection">
+               <bool>false</bool>
+              </attribute>
+              <column>
+               <property name="text">
+                <string>Заполнение, %</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Время поиска в массиве</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Время поиска в дереве</string>
+               </property>
+              </column>
+             </widget>
             </item>
            </layout>
           </widget>
