@@ -92,7 +92,7 @@ namespace benchmark {
     size_t m_max_size;
     array_t m_array;
     tree_t m_tree;
-    static const size_t search_repeat_count {100'000};
+    static const size_t search_repeat_count {300'000};
 
     rand_dev_t m_rdev;
     rand_gen_t m_rgen;
