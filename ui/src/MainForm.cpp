@@ -9,12 +9,14 @@
 #include <qboxlayout.h>
 #include <qchart.h>
 #include <qchartview.h>
+#include <qheaderview.h>
 #include <qlayout.h>
 #include <qlineseries.h>
 #include <qmainwindow.h>
 #include <qobjectdefs.h>
 #include <qpoint.h>
 #include <qsplineseries.h>
+#include <qtablewidget.h>
 #include <qthread.h>
 #include <qwidget.h>
 
@@ -44,6 +46,11 @@ ui::MainForm::MainForm(QWidget* parent)
   ui->replFromVal->setMinimum(std::numeric_limits<value_t>::min());
   ui->replToVal->setMaximum(std::numeric_limits<value_t>::max());
   ui->replToVal->setMinimum(std::numeric_limits<value_t>::min());
+
+  ui->visualisation->header()->setSectionResizeMode(QHeaderView::Stretch);
+  ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+  ui->chart->setRenderHint(QPainter::Antialiasing);
 
   m_tree_worker->moveToThread(m_tree_thread);
   m_bench_worker->moveToThread(m_bench_thread);
@@ -89,7 +96,7 @@ void ui::MainForm::configure_slots() {
           SIGNAL(measurementsFinished(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*)),
           this,
           SLOT(addSeries(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*)));
-  connect(m_bench_worker, SIGNAL(measurementStepFinished(int)), this, SLOT(updateChartProgress(int)));
+  connect(m_bench_worker, SIGNAL(measurementStepFinished(double, long, long)), this, SLOT(handleMeasurementStep(double, long, long)));
 }
 
 void ui::MainForm::interactiveInsert() {
@@ -116,14 +123,13 @@ void ui::MainForm::updateTree(QTreeWidgetItem* item) {
 }
 
 void ui::MainForm::updateChart() {
-  std::cout << "update chart" << '\n';
+  ui->tableWidget->setRowCount(0);
   const size_t size = ui->maxElements->value();
   const order_t order = ui->treeOrder->value();
   emit startChartWorker(size, order);
 }
 
 void ui::MainForm::addSeries(QtCharts::QSplineSeries* arr_series, QtCharts::QSplineSeries* tree_series) {
-  std::cout << "got series" << '\n';
   auto chart = new QtCharts::QChart();
   chart->addSeries(arr_series);
   chart->addSeries(tree_series);
@@ -141,6 +147,17 @@ void ui::MainForm::updateSearchResult(bool result) {
   }
 }
 
-void ui::MainForm::updateChartProgress(int percent) {
-  ui->chartProgress->setValue(percent);
+void ui::MainForm::handleMeasurementStep(double part, long array_time, long tree_time) {
+  ui->chartProgress->setValue(part * 100);
+
+  const auto part_item = new QTableWidgetItem(QString::number(part * 100));
+  const auto arr_time_item = new QTableWidgetItem(QString::number(array_time));
+  const auto tree_time_item = new QTableWidgetItem(QString::number(tree_time));
+
+  const auto free_row = ui->tableWidget->rowCount();
+  ui->tableWidget->setRowCount(free_row + 1);
+
+  ui->tableWidget->setItem(free_row, 0, part_item);
+  ui->tableWidget->setItem(free_row, 1, arr_time_item);
+  ui->tableWidget->setItem(free_row, 2, tree_time_item);
 }

@@ -28,7 +28,7 @@ namespace ui {
 
   signals:
     void measurementsFinished(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*);
-    void measurementStepFinished(int);
+    void measurementStepFinished(double, long, long);
 
   public slots:
     void startMeasurements(size_t, order_t);

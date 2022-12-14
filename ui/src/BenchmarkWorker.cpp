@@ -21,13 +21,14 @@ void ui::BenchmarkWorker::startMeasurements(size_t size, order_t order) {
   arr_series->setName("Массив");
   tree_series->setName("Дерево");
 
-  for (std::double_t part = 0.1; part <= 1.0; part += 0.05) {
+  const std::double_t step_grow = 0.01;
+  for (std::double_t part = step_grow; part <= 1.0; part += step_grow) {
     const auto measurement = m_benchmark.measure(part);
     const auto arr_point = QPointF(measurement.filled_part, measurement.array_time);
     const auto tree_point = QPointF(measurement.filled_part, measurement.tree_time);
     arr_series->append(arr_point);
     tree_series->append(tree_point);
-    emit measurementStepFinished(part * 100);
+    emit measurementStepFinished(part, measurement.array_time, measurement.tree_time);
   }
 
   emit measurementsFinished(arr_series, tree_series);
