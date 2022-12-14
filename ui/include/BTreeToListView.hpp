@@ -24,7 +24,7 @@ template <std::totally_ordered ValT>
 QTreeWidgetItem *leaf_to_treeitem(btree::BTreeNode<ValT> *node) {
   auto item = new QTreeWidgetItem();
 
-  item->setText(0, QString::number(node->subtree_min()) + " - " +
+  item->setText(0, QString::number(node->subtree_min()) + " .. " +
                        QString::number(node->subtree_max()));
   item->setText(1, node_item_name);
 
@@ -47,7 +47,7 @@ QTreeWidgetItem *subtree_to_treeitem(btree::BTreeNode<ValT> *node) {
   }
   auto item = new QTreeWidgetItem();
 
-  item->setText(0, QString::number(node->subtree_min()) + " - " +
+  item->setText(0, QString::number(node->subtree_min()) + " .. " +
                        QString::number(node->subtree_max()));
   item->setText(1, node_item_name);
 
