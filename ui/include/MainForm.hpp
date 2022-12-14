@@ -3,6 +3,7 @@
 #include "BenchmarkWorker.hpp"
 #include "ui_MainForm.h"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -45,6 +46,8 @@ namespace ui {
     void interactiveSearch();
     void updateChart();
     void addSeries(QtCharts::QSplineSeries*, QtCharts::QSplineSeries*);
+    void updateSearchResult(bool);
+    void updateChartProgress(std::double_t);
 
   signals:
     void interactiveInsert(value_t);
