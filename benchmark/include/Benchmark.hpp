@@ -72,14 +72,15 @@ namespace benchmark {
       });
 
       const auto arr_search_start = m_clock.now();
+      volatile bool ballast;
       for (const auto& val : search_vals) {
-        std::binary_search(m_array.cbegin(), m_array.part_cend(part), val);
+        ballast = std::binary_search(m_array.cbegin(), m_array.part_cend(part), val);
       }
       const auto arr_search_end = m_clock.now();
 
       const auto tree_search_start = m_clock.now();
       for (const auto& val : search_vals) {
-        m_tree.search(val);
+        ballast = m_tree.search(val);
       }
       const auto tree_search_end = m_clock.now();
 
